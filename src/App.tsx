@@ -64,7 +64,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-white text-black">
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-4xl font-bold">AMS2 Telemetry Analysis</h1>
@@ -74,7 +74,7 @@ function App() {
         </div>
 
         {/* Race Selection */}
-        <Card className="mb-6 bg-zinc-900 border-zinc-800">
+        <Card className="mb-6 bg-white border-gray-300">
           <CardHeader>
             <CardTitle>Select Race & Laps</CardTitle>
             <CardDescription>Choose a race and two laps to compare</CardDescription>
@@ -84,7 +84,7 @@ function App() {
               <div>
                 <label className="block text-sm font-medium mb-2">Race</label>
                 <select
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-black"
                   value={selectedRace}
                   onChange={(e) => setSelectedRace(e.target.value)}
                 >
@@ -101,9 +101,9 @@ function App() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Status</label>
                   <div className={`px-3 py-2 rounded-md ${
-                    raceStatus.status === 'Ready' ? 'bg-green-900/30 text-green-400' :
-                    raceStatus.status === 'Processing' ? 'bg-yellow-900/30 text-yellow-400' :
-                    'bg-red-900/30 text-red-400'
+                    raceStatus.status === 'Ready' ? 'bg-green-100 text-green-800 border border-green-300' :
+                    raceStatus.status === 'Processing' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
+                    'bg-red-100 text-red-800 border border-red-300'
                   }`}>
                     {raceStatus.status} ({raceStatus.laps_count} laps)
                   </div>
@@ -116,7 +116,7 @@ function App() {
                   type="number"
                   min="1"
                   max={raceStatus?.laps_count || 999}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-black"
                   value={lap1}
                   onChange={(e) => setLap1(parseInt(e.target.value))}
                 />
@@ -128,7 +128,7 @@ function App() {
                   type="number"
                   min="1"
                   max={raceStatus?.laps_count || 999}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-md"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-black"
                   value={lap2}
                   onChange={(e) => setLap2(parseInt(e.target.value))}
                 />
@@ -147,7 +147,7 @@ function App() {
             </div>
 
             {error && (
-              <div className="mt-4 p-3 bg-red-900/30 border border-red-900/50 rounded-md text-red-400">
+              <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-md text-red-800">
                 {error}
               </div>
             )}
@@ -164,9 +164,9 @@ function App() {
         )}
 
         {!comparisonData && !loading && (
-          <Card className="bg-zinc-900 border-zinc-800">
+          <Card className="bg-white border-gray-300">
             <CardContent className="py-12">
-              <p className="text-center text-muted-foreground">
+              <p className="text-center text-gray-600">
                 Select a race and laps to compare telemetry data
               </p>
             </CardContent>
