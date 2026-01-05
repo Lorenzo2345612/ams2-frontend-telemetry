@@ -275,7 +275,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
               <Line
                 type="monotone"
                 dataKey="lap2"
-                stroke="#06b6d4"
+                stroke="#062cd4"
                 name={`Lap ${lap2Number}`}
                 dot={false}
                 strokeWidth={2}
