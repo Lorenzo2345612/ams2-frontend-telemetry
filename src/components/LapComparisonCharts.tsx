@@ -48,6 +48,13 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
     lap2: data.steering.lap_2[idx],
   }));
 
+  // Generate X-axis ticks in 200m intervals
+  const maxDistance = Math.max(...data.delta_time.distance);
+  const xAxisTicks = [];
+  for (let i = 0; i <= maxDistance; i += 200) {
+    xAxisTicks.push(i);
+  }
+
   return (
     <div className="space-y-6">
       {/* Summary Card */}
@@ -108,6 +115,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 dataKey="distance"
                 label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
                 stroke="#000"
+                ticks={xAxisTicks}
               />
               <YAxis
                 label={{ value: 'Delta (s)', angle: -90, position: 'insideLeft' }}
@@ -144,6 +152,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 dataKey="distance"
                 label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
                 stroke="#000"
+                ticks={xAxisTicks}
               />
               <YAxis
                 label={{ value: 'Speed (km/h)', angle: -90, position: 'insideLeft' }}
@@ -189,6 +198,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 dataKey="distance"
                 label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
                 stroke="#000"
+                ticks={xAxisTicks}
               />
               <YAxis
                 label={{ value: 'Throttle (0-1)', angle: -90, position: 'insideLeft' }}
@@ -236,6 +246,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 dataKey="distance"
                 label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
                 stroke="#000"
+                ticks={xAxisTicks}
               />
               <YAxis
                 label={{ value: 'Brake (0-1)', angle: -90, position: 'insideLeft' }}
@@ -283,6 +294,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 dataKey="distance"
                 label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
                 stroke="#000"
+                ticks={xAxisTicks}
               />
               <YAxis
                 label={{ value: 'Steering (-1 to 1)', angle: -90, position: 'insideLeft' }}
