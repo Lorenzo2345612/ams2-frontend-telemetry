@@ -175,11 +175,11 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
         </CardContent>
       </Card>
 
-      {/* Throttle and Brake Chart */}
+      {/* Throttle Chart */}
       <Card className="bg-white border-gray-300">
         <CardHeader>
-          <CardTitle>Throttle & Brake Inputs</CardTitle>
-          <CardDescription>Driver inputs comparison</CardDescription>
+          <CardTitle>Throttle Input</CardTitle>
+          <CardDescription>Throttle application comparison</CardDescription>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -191,7 +191,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 stroke="#000"
               />
               <YAxis
-                label={{ value: 'Input (0-1)', angle: -90, position: 'insideLeft' }}
+                label={{ value: 'Throttle (0-1)', angle: -90, position: 'insideLeft' }}
                 stroke="#000"
                 domain={[0, 1]}
               />
@@ -204,7 +204,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 type="monotone"
                 dataKey="throttle1"
                 stroke="#10b981"
-                name={`Throttle L${lap1Number}`}
+                name={`Lap ${lap1Number}`}
                 dot={false}
                 strokeWidth={2}
               />
@@ -212,16 +212,46 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 type="monotone"
                 dataKey="throttle2"
                 stroke="#34d399"
-                name={`Throttle L${lap2Number}`}
+                name={`Lap ${lap2Number}`}
                 dot={false}
                 strokeWidth={2}
                 strokeDasharray="5 5"
               />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Brake Chart */}
+      <Card className="bg-white border-gray-300">
+        <CardHeader>
+          <CardTitle>Brake Input</CardTitle>
+          <CardDescription>Brake application comparison</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={inputsData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="distance"
+                label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
+                stroke="#000"
+              />
+              <YAxis
+                label={{ value: 'Brake (0-1)', angle: -90, position: 'insideLeft' }}
+                stroke="#000"
+                domain={[0, 1]}
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
+                formatter={(value: number) => `${(value * 100).toFixed(0)}%`}
+              />
+              <Legend />
               <Line
                 type="monotone"
                 dataKey="brake1"
                 stroke="#ef4444"
-                name={`Brake L${lap1Number}`}
+                name={`Lap ${lap1Number}`}
                 dot={false}
                 strokeWidth={2}
               />
@@ -229,7 +259,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 type="monotone"
                 dataKey="brake2"
                 stroke="#f87171"
-                name={`Brake L${lap2Number}`}
+                name={`Lap ${lap2Number}`}
                 dot={false}
                 strokeWidth={2}
                 strokeDasharray="5 5"
