@@ -148,3 +148,42 @@ export const compareLapFuel = async (
   const response = await api.get(`/race/${raceId}/fuel/compare/${lap1}/${lap2}`);
   return response.data;
 };
+
+// Race Management Types
+export interface RaceInfo {
+  race_id: string;
+  status: 'Processing' | 'Ready' | 'Failed';
+  created_at: string;
+  updated_at: string;
+  laps_count: number;
+  raw_data_path: string | null;
+}
+
+export interface RaceDownload {
+  race_id: string;
+  status: string;
+  size_bytes: number;
+  data: string;
+}
+
+// Race Management API Functions
+export const listRaces = async (): Promise<RaceInfo[]> => {
+  const response = await api.get('/race/list');
+  return response.data;
+};
+
+export const downloadRace = async (raceId: string): Promise<RaceDownload> => {
+  const response = await api.get(`/race/${raceId}/download`);
+  return response.data;
+};
+
+export const downloadRaceRaw = async (raceId: string): Promise<Blob> => {
+  const response = await api.get(`/race/${raceId}/download/raw`, {
+    responseType: 'blob',
+  });
+  return response.data;
+};
+
+export const deleteRace = async (raceId: string): Promise<void> => {
+  await api.delete(`/race/${raceId}`);
+};

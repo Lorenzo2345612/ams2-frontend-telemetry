@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Menu, X, BarChart3, Fuel, GitCompare } from 'lucide-react';
+import { Menu, X, BarChart3, Fuel, GitCompare, Database } from 'lucide-react';
 import { Button } from './button';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +11,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
+  {
+    label: 'Race Packages',
+    path: '/races',
+    icon: <Database className="h-5 w-5" />,
+  },
   {
     label: 'Lap Comparison',
     path: '/',
