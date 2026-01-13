@@ -75,3 +75,76 @@ export const compareLaps = async (
   const response = await api.get(`/race/${raceId}/compare/${lap1}/${lap2}`);
   return response.data;
 };
+
+// Fuel Analysis Types
+export interface FuelSummary {
+  lap_number: number;
+  lap_time: number;
+  fuel_capacity: number;
+  fuel_start: number;
+  fuel_end: number;
+  fuel_used: number;
+  consumption_rate_per_km: number;
+  lap_distance_km: number;
+  estimated_laps_remaining: number;
+}
+
+export interface FuelCurve {
+  distance: number[];
+  fuel_liters: number[];
+  fuel_percentage: number[];
+}
+
+export interface SingleLapFuelResponse {
+  summary: FuelSummary;
+  fuel_curve: FuelCurve;
+}
+
+export interface FuelComparisonSummary {
+  lap_1_number: number;
+  lap_2_number: number;
+  lap_1_time: number;
+  lap_2_time: number;
+  lap_1_fuel_used: number;
+  lap_2_fuel_used: number;
+  fuel_delta: number;
+  lap_1_consumption_rate: number;
+  lap_2_consumption_rate: number;
+  consumption_rate_delta: number;
+  more_efficient_lap: number;
+}
+
+export interface FuelDeltaSeries {
+  distance: number[];
+  delta: number[];
+}
+
+export interface FuelComparisonCurves {
+  distance: number[];
+  lap_1_fuel: number[];
+  lap_2_fuel: number[];
+}
+
+export interface FuelComparisonResponse {
+  summary: FuelComparisonSummary;
+  fuel_delta: FuelDeltaSeries;
+  fuel_curves: FuelComparisonCurves;
+}
+
+// Fuel Analysis API Functions
+export const analyzeLapFuel = async (
+  raceId: string,
+  lapNumber: number
+): Promise<SingleLapFuelResponse> => {
+  const response = await api.get(`/race/${raceId}/fuel/${lapNumber}`);
+  return response.data;
+};
+
+export const compareLapFuel = async (
+  raceId: string,
+  lap1: number,
+  lap2: number
+): Promise<FuelComparisonResponse> => {
+  const response = await api.get(`/race/${raceId}/fuel/compare/${lap1}/${lap2}`);
+  return response.data;
+};
