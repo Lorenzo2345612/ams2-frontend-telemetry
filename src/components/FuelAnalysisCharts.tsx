@@ -12,6 +12,9 @@ import {
   ReferenceLine,
   AreaChart,
   Area,
+  ScatterChart,
+  Scatter,
+  ZAxis,
 } from 'recharts';
 import { formatTime } from '@/lib/utils';
 
@@ -162,6 +165,64 @@ export function SingleLapFuelCharts({ data, lapNumber }: SingleLapProps) {
                 strokeWidth={2}
               />
             </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Fuel vs Speed Scatter Plot */}
+      <Card className="bg-white border-gray-300">
+        <CardHeader>
+          <CardTitle>Fuel Consumption vs Speed</CardTitle>
+          <CardDescription>
+            Fuel consumed per segment at different speeds (bubble size = throttle)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={400}>
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                type="number"
+                dataKey="speed"
+                name="Speed"
+                label={{ value: 'Speed (km/h)', position: 'insideBottom', offset: -5 }}
+                stroke="#000"
+              />
+              <YAxis
+                type="number"
+                dataKey="fuel_consumed"
+                name="Fuel"
+                label={{ value: 'Fuel Consumed (L)', angle: -90, position: 'insideLeft' }}
+                stroke="#000"
+              />
+              <ZAxis
+                type="number"
+                dataKey="throttle"
+                range={[50, 400]}
+                name="Throttle"
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
+                formatter={(value: number, name: string) => {
+                  if (name === 'Speed') return `${value.toFixed(1)} km/h`;
+                  if (name === 'Fuel') return `${value.toFixed(4)} L`;
+                  if (name === 'Throttle') return `${(value * 100).toFixed(0)}%`;
+                  return value;
+                }}
+              />
+              <Legend />
+              <Scatter
+                name="Fuel vs Speed"
+                data={data.fuel_speed_scatter.speed.map((speed, idx) => ({
+                  speed,
+                  fuel_consumed: data.fuel_speed_scatter.fuel_consumed[idx],
+                  throttle: data.fuel_speed_scatter.throttle[idx],
+                  gear: data.fuel_speed_scatter.gear[idx],
+                }))}
+                fill="#f97316"
+                fillOpacity={0.6}
+              />
+            </ScatterChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>

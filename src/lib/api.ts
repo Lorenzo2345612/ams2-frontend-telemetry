@@ -95,9 +95,17 @@ export interface FuelCurve {
   fuel_percentage: number[];
 }
 
+export interface FuelSpeedScatter {
+  speed: number[];
+  fuel_consumed: number[];
+  throttle: number[];
+  gear: number[];
+}
+
 export interface SingleLapFuelResponse {
   summary: FuelSummary;
   fuel_curve: FuelCurve;
+  fuel_speed_scatter: FuelSpeedScatter;
 }
 
 export interface FuelComparisonSummary {
