@@ -109,11 +109,19 @@ export interface FuelThrottleScatter {
   gear: number[];
 }
 
+export interface FuelTrackMap {
+  pos_x: number[];
+  pos_z: number[];
+  fuel_consumed: number[];
+  fuel_normalized: number[];
+}
+
 export interface SingleLapFuelResponse {
   summary: FuelSummary;
   fuel_curve: FuelCurve;
   fuel_speed_scatter: FuelSpeedScatter;
   fuel_throttle_scatter: FuelThrottleScatter;
+  fuel_track_map: FuelTrackMap;
 }
 
 export interface FuelComparisonSummary {

@@ -15,8 +15,19 @@ import {
   ScatterChart,
   Scatter,
   ZAxis,
+  Cell,
 } from 'recharts';
+
 import { formatTime } from '@/lib/utils';
+
+// Helper function to interpolate color from green to red based on normalized value (0-1)
+const getColorForValue = (normalized: number): string => {
+  // Green (low consumption) to Red (high consumption)
+  const r = Math.round(255 * normalized);
+  const g = Math.round(255 * (1 - normalized));
+  const b = 0;
+  return `rgb(${r}, ${g}, ${b})`;
+};
 
 interface SingleLapProps {
   data: SingleLapFuelResponse;
@@ -283,6 +294,72 @@ export function SingleLapFuelCharts({ data, lapNumber }: SingleLapProps) {
               />
             </ScatterChart>
           </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Track Map - Fuel Consumption */}
+      <Card className="bg-white border-gray-300">
+        <CardHeader>
+          <CardTitle>Track Map - Fuel Consumption</CardTitle>
+          <CardDescription>
+            Circuit visualization with fuel consumption (Green = Low, Red = High)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={500}>
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                type="number"
+                dataKey="pos_x"
+                name="X"
+                stroke="#000"
+                domain={['auto', 'auto']}
+                hide
+              />
+              <YAxis
+                type="number"
+                dataKey="pos_z"
+                name="Z"
+                stroke="#000"
+                domain={['auto', 'auto']}
+                hide
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
+                formatter={(value: number, name: string) => {
+                  if (name === 'Fuel') return `${value.toFixed(4)} L`;
+                  return value.toFixed(1);
+                }}
+              />
+              <Scatter
+                name="Track"
+                data={data.fuel_track_map.pos_x.map((pos_x, idx) => ({
+                  pos_x,
+                  pos_z: data.fuel_track_map.pos_z[idx],
+                  fuel: data.fuel_track_map.fuel_consumed[idx],
+                  normalized: data.fuel_track_map.fuel_normalized[idx],
+                }))}
+              >
+                {data.fuel_track_map.fuel_normalized.map((normalized, idx) => (
+                  <Cell key={`cell-${idx}`} fill={getColorForValue(normalized)} />
+                ))}
+              </Scatter>
+            </ScatterChart>
+          </ResponsiveContainer>
+          {/* Color scale legend */}
+          <div className="flex justify-center mt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Low</span>
+              <div
+                className="w-48 h-4 rounded"
+                style={{
+                  background: 'linear-gradient(to right, rgb(0, 255, 0), rgb(255, 255, 0), rgb(255, 0, 0))'
+                }}
+              />
+              <span className="text-sm">High</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
