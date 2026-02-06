@@ -99,6 +99,75 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
         </CardContent>
       </Card>
 
+      {/* Segment Analysis Card */}
+      <Card className="bg-white border-gray-300">
+        <CardHeader>
+          <CardTitle>Top Time Gain/Loss Segments</CardTitle>
+          <CardDescription>
+            Non-overlapping segments where Lap {lap2Number} gains or loses the most time
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Time Loss Segments */}
+            <div>
+              <h3 className="text-lg font-semibold text-red-600 mb-3">Time Lost</h3>
+              <div className="space-y-2">
+                {data.segment_analysis.time_loss_segments.map((segment, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-gray-500">#{idx + 1}</span>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {segment.start_distance.toFixed(0)}m - {segment.end_distance.toFixed(0)}m
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(segment.end_distance - segment.start_distance).toFixed(0)}m segment
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-lg font-bold text-red-600">
+                      +{(segment.time_delta * 1000).toFixed(0)}ms
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Time Gain Segments */}
+            <div>
+              <h3 className="text-lg font-semibold text-green-600 mb-3">Time Gained</h3>
+              <div className="space-y-2">
+                {data.segment_analysis.time_gain_segments.map((segment, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium text-gray-500">#{idx + 1}</span>
+                      <div>
+                        <p className="text-sm font-medium">
+                          {segment.start_distance.toFixed(0)}m - {segment.end_distance.toFixed(0)}m
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {(segment.end_distance - segment.start_distance).toFixed(0)}m segment
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-lg font-bold text-green-600">
+                      {(segment.time_delta * 1000).toFixed(0)}ms
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Delta Time Chart */}
       <Card className="bg-white border-gray-300">
         <CardHeader>

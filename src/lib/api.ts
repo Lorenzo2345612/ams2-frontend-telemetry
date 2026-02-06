@@ -41,6 +41,17 @@ export interface DeltaTimeSeries {
   delta: number[];
 }
 
+export interface Segment {
+  start_distance: number;
+  end_distance: number;
+  time_delta: number;
+}
+
+export interface SegmentAnalysis {
+  time_loss_segments: Segment[];
+  time_gain_segments: Segment[];
+}
+
 export interface LapComparisonResponse {
   summary: LapSummary;
   delta_time: DeltaTimeSeries;
@@ -48,6 +59,7 @@ export interface LapComparisonResponse {
   throttle: TelemetryTimeSeries;
   brake: TelemetryTimeSeries;
   steering: TelemetryTimeSeries;
+  segment_analysis: SegmentAnalysis;
 }
 
 export const uploadRace = async (base64Data: string) => {
