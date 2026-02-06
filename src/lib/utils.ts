@@ -12,6 +12,9 @@ export function formatTime(seconds: number): string {
 }
 
 export function formatDelta(delta: number): string {
-  const sign = delta >= 0 ? '+' : '';
-  return `${sign}${delta.toFixed(3)}s`;
+  const sign = delta >= 0 ? '+' : '-';
+  const absDelta = Math.abs(delta);
+  const mins = Math.floor(absDelta / 60);
+  const secs = absDelta % 60;
+  return `${sign}${mins.toString().padStart(2, '0')}:${secs.toFixed(3).padStart(6, '0')}`;
 }

@@ -122,15 +122,15 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                       <span className="text-sm font-medium text-gray-500">#{idx + 1}</span>
                       <div>
                         <p className="text-sm font-medium">
-                          {segment.start_distance.toFixed(0)}m - {segment.end_distance.toFixed(0)}m
+                          {(segment.start_distance / 1000).toFixed(2)}km - {(segment.end_distance / 1000).toFixed(2)}km
                         </p>
                         <p className="text-xs text-gray-500">
-                          {(segment.end_distance - segment.start_distance).toFixed(0)}m segment
+                          {segment.start_distance.toFixed(0)}m - {segment.end_distance.toFixed(0)}m ({(segment.end_distance - segment.start_distance).toFixed(0)}m)
                         </p>
                       </div>
                     </div>
                     <span className="text-lg font-bold text-red-600">
-                      +{(segment.time_delta * 1000).toFixed(0)}ms
+                      {formatDelta(segment.time_delta)}
                     </span>
                   </div>
                 ))}
@@ -150,15 +150,15 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                       <span className="text-sm font-medium text-gray-500">#{idx + 1}</span>
                       <div>
                         <p className="text-sm font-medium">
-                          {segment.start_distance.toFixed(0)}m - {segment.end_distance.toFixed(0)}m
+                          {(segment.start_distance / 1000).toFixed(2)}km - {(segment.end_distance / 1000).toFixed(2)}km
                         </p>
                         <p className="text-xs text-gray-500">
-                          {(segment.end_distance - segment.start_distance).toFixed(0)}m segment
+                          {segment.start_distance.toFixed(0)}m - {segment.end_distance.toFixed(0)}m ({(segment.end_distance - segment.start_distance).toFixed(0)}m)
                         </p>
                       </div>
                     </div>
                     <span className="text-lg font-bold text-green-600">
-                      {(segment.time_delta * 1000).toFixed(0)}ms
+                      {formatDelta(segment.time_delta)}
                     </span>
                   </div>
                 ))}
