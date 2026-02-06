@@ -10,7 +10,17 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
+  ScatterChart,
+  Scatter,
+  Cell,
 } from 'recharts';
+
+// Helper function to get color based on delta value (-1 = green, 0 = grey, 1 = red)
+const getTrackColor = (colorValue: number): string => {
+  if (colorValue > 0) return '#ef4444'; // Red for time loss
+  if (colorValue < 0) return '#22c55e'; // Green for time gain
+  return '#9ca3af'; // Grey for neutral
+};
 import { formatDelta, formatTime } from '@/lib/utils';
 
 interface Props {
@@ -163,6 +173,76 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Track Map - Delta Visualization */}
+      <Card className="bg-white border-gray-300">
+        <CardHeader>
+          <CardTitle>Track Map - Time Delta</CardTitle>
+          <CardDescription>
+            Green = Lap {lap2Number} gaining time | Red = Lap {lap2Number} losing time | Grey = Neutral
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={500}>
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <XAxis
+                type="number"
+                dataKey="pos_x"
+                name="X"
+                stroke="#000"
+                domain={['auto', 'auto']}
+                hide
+              />
+              <YAxis
+                type="number"
+                dataKey="pos_z"
+                name="Z"
+                stroke="#000"
+                domain={['auto', 'auto']}
+                hide
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
+                formatter={(value: number, name: string) => {
+                  if (name === 'Status') {
+                    if (value > 0) return 'Losing time';
+                    if (value < 0) return 'Gaining time';
+                    return 'Neutral';
+                  }
+                  return value.toFixed(1);
+                }}
+              />
+              <Scatter
+                name="Track"
+                data={data.delta_track_map.pos_x.map((pos_x, idx) => ({
+                  pos_x,
+                  pos_z: data.delta_track_map.pos_z[idx],
+                  color_value: data.delta_track_map.color_value[idx],
+                }))}
+              >
+                {data.delta_track_map.color_value.map((colorValue, idx) => (
+                  <Cell key={`cell-${idx}`} fill={getTrackColor(colorValue)} />
+                ))}
+              </Scatter>
+            </ScatterChart>
+          </ResponsiveContainer>
+          {/* Color legend */}
+          <div className="flex justify-center mt-4 gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#22c55e' }} />
+              <span className="text-sm">Gaining Time</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#9ca3af' }} />
+              <span className="text-sm">Neutral</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }} />
+              <span className="text-sm">Losing Time</span>
             </div>
           </div>
         </CardContent>

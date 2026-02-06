@@ -52,6 +52,12 @@ export interface SegmentAnalysis {
   time_gain_segments: Segment[];
 }
 
+export interface DeltaTrackMap {
+  pos_x: number[];
+  pos_z: number[];
+  color_value: number[];
+}
+
 export interface LapComparisonResponse {
   summary: LapSummary;
   delta_time: DeltaTimeSeries;
@@ -60,6 +66,7 @@ export interface LapComparisonResponse {
   brake: TelemetryTimeSeries;
   steering: TelemetryTimeSeries;
   segment_analysis: SegmentAnalysis;
+  delta_track_map: DeltaTrackMap;
 }
 
 export const uploadRace = async (base64Data: string) => {
