@@ -10,9 +10,6 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
-  ScatterChart,
-  Scatter,
-  Cell,
 } from 'recharts';
 
 // Helper function to get color based on delta value (-1 = green, 0 = grey, 1 = red)
@@ -20,6 +17,44 @@ const getTrackColor = (colorValue: number): string => {
   if (colorValue > 0) return '#ef4444'; // Red for time loss
   if (colorValue < 0) return '#22c55e'; // Green for time gain
   return '#9ca3af'; // Grey for neutral
+};
+
+// Helper to create line segments grouped by consecutive color
+interface TrackSegment {
+  points: { pos_x: number; pos_z: number }[];
+  color: string;
+}
+
+const createTrackSegments = (
+  posX: number[],
+  posZ: number[],
+  colorValues: number[]
+): TrackSegment[] => {
+  const segments: TrackSegment[] = [];
+  if (posX.length === 0) return segments;
+
+  let currentColor = getTrackColor(colorValues[0]);
+  let currentPoints: { pos_x: number; pos_z: number }[] = [{ pos_x: posX[0], pos_z: posZ[0] }];
+
+  for (let i = 1; i < posX.length; i++) {
+    const color = getTrackColor(colorValues[i]);
+    if (color === currentColor) {
+      currentPoints.push({ pos_x: posX[i], pos_z: posZ[i] });
+    } else {
+      // Add last point to current segment for continuity
+      currentPoints.push({ pos_x: posX[i], pos_z: posZ[i] });
+      segments.push({ points: currentPoints, color: currentColor });
+      // Start new segment with current point
+      currentColor = color;
+      currentPoints = [{ pos_x: posX[i], pos_z: posZ[i] }];
+    }
+  }
+  // Push the last segment
+  if (currentPoints.length > 0) {
+    segments.push({ points: currentPoints, color: currentColor });
+  }
+
+  return segments;
 };
 import { formatDelta, formatTime } from '@/lib/utils';
 
@@ -188,11 +223,10 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={500}>
-            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+            <LineChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
               <XAxis
                 type="number"
                 dataKey="pos_x"
-                name="X"
                 stroke="#000"
                 domain={['auto', 'auto']}
                 hide
@@ -200,35 +234,31 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
               <YAxis
                 type="number"
                 dataKey="pos_z"
-                name="Z"
                 stroke="#000"
                 domain={['auto', 'auto']}
                 hide
               />
               <Tooltip
                 contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
-                formatter={(value: number, name: string) => {
-                  if (name === 'Status') {
-                    if (value > 0) return 'Losing time';
-                    if (value < 0) return 'Gaining time';
-                    return 'Neutral';
-                  }
-                  return value.toFixed(1);
-                }}
               />
-              <Scatter
-                name="Track"
-                data={data.delta_track_map.pos_x.map((pos_x, idx) => ({
-                  pos_x,
-                  pos_z: data.delta_track_map.pos_z[idx],
-                  color_value: data.delta_track_map.color_value[idx],
-                }))}
-              >
-                {data.delta_track_map.color_value.map((colorValue, idx) => (
-                  <Cell key={`cell-${idx}`} fill={getTrackColor(colorValue)} />
-                ))}
-              </Scatter>
-            </ScatterChart>
+              {createTrackSegments(
+                data.delta_track_map.pos_x,
+                data.delta_track_map.pos_z,
+                data.delta_track_map.color_value
+              ).map((segment, idx) => (
+                <Line
+                  key={`segment-${idx}`}
+                  type="linear"
+                  data={segment.points}
+                  dataKey="pos_z"
+                  stroke={segment.color}
+                  strokeWidth={3}
+                  dot={false}
+                  isAnimationActive={false}
+                  legendType="none"
+                />
+              ))}
+            </LineChart>
           </ResponsiveContainer>
           {/* Color legend */}
           <div className="flex justify-center mt-4 gap-6">

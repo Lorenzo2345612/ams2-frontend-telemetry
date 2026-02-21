@@ -15,7 +15,6 @@ import {
   ScatterChart,
   Scatter,
   ZAxis,
-  Cell,
 } from 'recharts';
 
 import { formatTime } from '@/lib/utils';
@@ -27,6 +26,33 @@ const getColorForValue = (normalized: number): string => {
   const g = Math.round(255 * (1 - normalized));
   const b = 0;
   return `rgb(${r}, ${g}, ${b})`;
+};
+
+// Helper to create line segments for continuous color values (fuel consumption)
+interface FuelTrackSegment {
+  points: { pos_x: number; pos_z: number }[];
+  color: string;
+}
+
+const createFuelTrackSegments = (
+  posX: number[],
+  posZ: number[],
+  normalizedValues: number[]
+): FuelTrackSegment[] => {
+  const segments: FuelTrackSegment[] = [];
+  if (posX.length < 2) return segments;
+
+  for (let i = 0; i < posX.length - 1; i++) {
+    segments.push({
+      points: [
+        { pos_x: posX[i], pos_z: posZ[i] },
+        { pos_x: posX[i + 1], pos_z: posZ[i + 1] },
+      ],
+      color: getColorForValue(normalizedValues[i]),
+    });
+  }
+
+  return segments;
 };
 
 interface SingleLapProps {
@@ -307,12 +333,10 @@ export function SingleLapFuelCharts({ data, lapNumber }: SingleLapProps) {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={500}>
-            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+            <LineChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
               <XAxis
                 type="number"
                 dataKey="pos_x"
-                name="X"
                 stroke="#000"
                 domain={['auto', 'auto']}
                 hide
@@ -320,32 +344,31 @@ export function SingleLapFuelCharts({ data, lapNumber }: SingleLapProps) {
               <YAxis
                 type="number"
                 dataKey="pos_z"
-                name="Z"
                 stroke="#000"
                 domain={['auto', 'auto']}
                 hide
               />
               <Tooltip
                 contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
-                formatter={(value: number, name: string) => {
-                  if (name === 'Fuel') return `${value.toFixed(4)} L`;
-                  return value.toFixed(1);
-                }}
               />
-              <Scatter
-                name="Track"
-                data={data.fuel_track_map.pos_x.map((pos_x, idx) => ({
-                  pos_x,
-                  pos_z: data.fuel_track_map.pos_z[idx],
-                  fuel: data.fuel_track_map.fuel_consumed[idx],
-                  normalized: data.fuel_track_map.fuel_normalized[idx],
-                }))}
-              >
-                {data.fuel_track_map.fuel_normalized.map((normalized, idx) => (
-                  <Cell key={`cell-${idx}`} fill={getColorForValue(normalized)} />
-                ))}
-              </Scatter>
-            </ScatterChart>
+              {createFuelTrackSegments(
+                data.fuel_track_map.pos_x,
+                data.fuel_track_map.pos_z,
+                data.fuel_track_map.fuel_normalized
+              ).map((segment, idx) => (
+                <Line
+                  key={`segment-${idx}`}
+                  type="linear"
+                  data={segment.points}
+                  dataKey="pos_z"
+                  stroke={segment.color}
+                  strokeWidth={3}
+                  dot={false}
+                  isAnimationActive={false}
+                  legendType="none"
+                />
+              ))}
+            </LineChart>
           </ResponsiveContainer>
           {/* Color scale legend */}
           <div className="flex justify-center mt-4">
