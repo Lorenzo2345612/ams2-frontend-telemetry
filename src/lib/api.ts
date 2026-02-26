@@ -41,6 +41,11 @@ export interface DeltaTimeSeries {
   delta: number[];
 }
 
+export interface CurvatureSeries {
+  distance: number[];
+  curvature: number[];
+}
+
 export interface Segment {
   start_distance: number;
   end_distance: number;
@@ -75,6 +80,7 @@ export interface LapComparisonResponse {
   throttle: TelemetryTimeSeries;
   brake: TelemetryTimeSeries;
   steering: TelemetryTimeSeries;
+  curvature: CurvatureSeries;
   segment_analysis: SegmentAnalysis;
   delta_track_map: DeltaTrackMap;
 }

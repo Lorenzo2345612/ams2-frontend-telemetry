@@ -95,6 +95,11 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
     lap2: data.steering.lap_2[idx],
   }));
 
+  const curvatureData = data.curvature.distance.map((distance, idx) => ({
+    distance: distance,
+    curvature: data.curvature.curvature[idx],
+  }));
+
   // Generate X-axis ticks in 200m intervals
   const maxDistance = Math.max(...data.delta_time.distance);
   const xAxisTicks = [];
@@ -523,6 +528,46 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                 dataKey="lap2"
                 stroke="#062cd4"
                 name={`Lap ${lap2Number}`}
+                dot={false}
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
+      {/* Curvature Chart */}
+      <Card className="bg-white border-gray-300">
+        <CardHeader>
+          <CardTitle>Track Curvature</CardTitle>
+          <CardDescription>
+            Curvature along the track (positive = right turn, negative = left turn)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={curvatureData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis
+                dataKey="distance"
+                label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
+                stroke="#000"
+                ticks={xAxisTicks}
+              />
+              <YAxis
+                label={{ value: 'Curvature (1/m)', angle: -90, position: 'insideLeft' }}
+                stroke="#000"
+              />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
+                formatter={(value: number) => value.toFixed(4)}
+              />
+              <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
+              <Line
+                type="monotone"
+                dataKey="curvature"
+                stroke="#8b5cf6"
+                name="Curvature"
                 dot={false}
                 strokeWidth={2}
               />
