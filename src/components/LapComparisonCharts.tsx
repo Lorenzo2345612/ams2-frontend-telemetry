@@ -10,6 +10,8 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
+  ReferenceDot,
+  Label,
 } from 'recharts';
 
 // Helper function to get color based on delta value (-1 = green, 0 = grey, 1 = red)
@@ -218,7 +220,7 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
         <CardHeader>
           <CardTitle>Track Map - Time Delta</CardTitle>
           <CardDescription>
-            Green = Lap {lap2Number} gaining time | Red = Lap {lap2Number} losing time | Grey = Neutral
+            Green = Lap {lap2Number} gaining time | Red = Lap {lap2Number} losing time | Grey = Neutral | Numbered markers = Corners
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -258,6 +260,25 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
                   legendType="none"
                 />
               ))}
+              {data.delta_track_map.corners.map((corner) => (
+                <ReferenceDot
+                  key={`corner-${corner.corner_number}`}
+                  x={corner.pos_x}
+                  y={corner.pos_z}
+                  r={12}
+                  fill="#1e40af"
+                  stroke="#fff"
+                  strokeWidth={2}
+                >
+                  <Label
+                    value={`${corner.corner_number}`}
+                    position="center"
+                    fill="#fff"
+                    fontSize={10}
+                    fontWeight="bold"
+                  />
+                </ReferenceDot>
+              ))}
             </LineChart>
           </ResponsiveContainer>
           {/* Color legend */}
@@ -273,6 +294,10 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }} />
               <span className="text-sm">Losing Time</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: '#1e40af' }}>1</div>
+              <span className="text-sm">Corner</span>
             </div>
           </div>
         </CardContent>

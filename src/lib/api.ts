@@ -52,10 +52,20 @@ export interface SegmentAnalysis {
   time_gain_segments: Segment[];
 }
 
+export interface Corner {
+  corner_number: number;
+  start_distance: number;
+  end_distance: number;
+  apex_distance: number;
+  pos_x: number;
+  pos_z: number;
+}
+
 export interface DeltaTrackMap {
   pos_x: number[];
   pos_z: number[];
   color_value: number[];
+  corners: Corner[];
 }
 
 export interface LapComparisonResponse {
