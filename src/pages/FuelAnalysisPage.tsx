@@ -4,6 +4,7 @@ import { SingleLapFuelCharts } from '@/components/FuelAnalysisCharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { FuelAnalysisSkeleton } from '@/components/ui/chart-skeletons';
 
 export function FuelAnalysisPage() {
   const [races, setRaces] = useState<string[]>([]);
@@ -72,7 +73,7 @@ export function FuelAnalysisPage() {
       </div>
 
       {/* Race Selection */}
-      <Card className="mb-6 bg-white border-gray-300">
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle>Select Race & Lap</CardTitle>
           <CardDescription>Choose a race and lap to analyze fuel consumption</CardDescription>
@@ -82,7 +83,7 @@ export function FuelAnalysisPage() {
             <div>
               <label className="block text-sm font-medium mb-2">Race</label>
               <select
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-black"
+                className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
                 value={selectedRace}
                 onChange={(e) => setSelectedRace(e.target.value)}
               >
@@ -99,9 +100,9 @@ export function FuelAnalysisPage() {
               <div>
                 <label className="block text-sm font-medium mb-2">Status</label>
                 <div className={`px-3 py-2 rounded-md ${
-                  raceStatus.status === 'Ready' ? 'bg-green-100 text-green-800 border border-green-300' :
-                  raceStatus.status === 'Processing' ? 'bg-yellow-100 text-yellow-800 border border-yellow-300' :
-                  'bg-red-100 text-red-800 border border-red-300'
+                  raceStatus.status === 'Ready' ? 'bg-green-500/10 text-green-400 border border-green-500/30' :
+                  raceStatus.status === 'Processing' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30' :
+                  'bg-red-500/10 text-red-400 border border-red-500/30'
                 }`}>
                   {raceStatus.status} ({raceStatus.laps_count} laps)
                 </div>
@@ -114,7 +115,7 @@ export function FuelAnalysisPage() {
                 type="number"
                 min="1"
                 max={raceStatus?.laps_count || 999}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-black"
+                className="w-full px-3 py-2 bg-input border border-border rounded-md text-foreground"
                 value={lapNumber}
                 onChange={(e) => setLapNumber(parseInt(e.target.value))}
               />
@@ -133,15 +134,18 @@ export function FuelAnalysisPage() {
           </div>
 
           {error && (
-            <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded-md text-red-800">
+            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-400">
               {error}
             </div>
           )}
         </CardContent>
       </Card>
 
+      {/* Loading skeleton */}
+      {loading && <FuelAnalysisSkeleton />}
+
       {/* Fuel Analysis Results */}
-      {fuelData && (
+      {fuelData && !loading && (
         <SingleLapFuelCharts
           data={fuelData}
           lapNumber={lapNumber}
@@ -149,9 +153,9 @@ export function FuelAnalysisPage() {
       )}
 
       {!fuelData && !loading && (
-        <Card className="bg-white border-gray-300">
+        <Card>
           <CardContent className="py-12">
-            <p className="text-center text-gray-600">
+            <p className="text-center text-muted-foreground">
               Select a race and lap to analyze fuel consumption
             </p>
           </CardContent>

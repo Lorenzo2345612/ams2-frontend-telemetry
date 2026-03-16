@@ -1,64 +1,17 @@
+import { useCallback, useMemo } from 'react';
 import { LapComparisonResponse } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceLine,
-  ReferenceDot,
-  Label,
-} from 'recharts';
-
-// Helper function to get color based on delta value (-1 = green, 0 = grey, 1 = red)
-const getTrackColor = (colorValue: number): string => {
-  if (colorValue > 0) return '#ef4444'; // Red for time loss
-  if (colorValue < 0) return '#22c55e'; // Green for time gain
-  return '#9ca3af'; // Grey for neutral
-};
-
-// Helper to create line segments grouped by consecutive color
-interface TrackSegment {
-  points: { pos_x: number; pos_z: number }[];
-  color: string;
-}
-
-const createTrackSegments = (
-  posX: number[],
-  posZ: number[],
-  colorValues: number[]
-): TrackSegment[] => {
-  const segments: TrackSegment[] = [];
-  if (posX.length === 0) return segments;
-
-  let currentColor = getTrackColor(colorValues[0]);
-  let currentPoints: { pos_x: number; pos_z: number }[] = [{ pos_x: posX[0], pos_z: posZ[0] }];
-
-  for (let i = 1; i < posX.length; i++) {
-    const color = getTrackColor(colorValues[i]);
-    if (color === currentColor) {
-      currentPoints.push({ pos_x: posX[i], pos_z: posZ[i] });
-    } else {
-      // Add last point to current segment for continuity
-      currentPoints.push({ pos_x: posX[i], pos_z: posZ[i] });
-      segments.push({ points: currentPoints, color: currentColor });
-      // Start new segment with current point
-      currentColor = color;
-      currentPoints = [{ pos_x: posX[i], pos_z: posZ[i] }];
-    }
-  }
-  // Push the last segment
-  if (currentPoints.length > 0) {
-    segments.push({ points: currentPoints, color: currentColor });
-  }
-
-  return segments;
-};
+import { KpiCard } from './ui/kpi-card';
+import { TelemetryCursorProvider, useTelemetryCursor } from '@/hooks/useTelemetryCursor';
+import { TrackMap } from './charts/TrackMap';
+import { MiniTrackMap } from './charts/MiniTrackMap';
+import { DeltaTimeChart } from './charts/DeltaTimeChart';
+import { SpeedComparisonChart } from './charts/SpeedComparisonChart';
+import { ThrottleBrakeChart } from './charts/ThrottleBrakeChart';
+import { SteeringChart } from './charts/SteeringChart';
+import { CornerAnalysisTable } from './charts/CornerAnalysisTable';
 import { formatDelta, formatTime } from '@/lib/utils';
+import type { Corner } from '@/lib/api';
 
 interface Props {
   data: LapComparisonResponse;
@@ -66,93 +19,121 @@ interface Props {
   lap2Number: number;
 }
 
-export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
-  // Prepare data for delta time chart
-  const deltaData = data.delta_time.distance.map((distance, idx) => ({
-    distance: distance,
-    delta: data.delta_time.delta[idx],
-  }));
+/**
+ * Inner component that has access to TelemetryCursorContext.
+ * Must be rendered inside TelemetryCursorProvider.
+ */
+function LapComparisonChartsInner({ data, lap1Number, lap2Number }: Props) {
+  const { setZoomRange } = useTelemetryCursor();
 
-  // Prepare data for speed chart
-  const speedData = data.speed.distance.map((distance, idx) => ({
-    distance: distance,
-    lap1: data.speed.lap_1[idx],
-    lap2: data.speed.lap_2[idx],
-  }));
+  const lap1Name = `Lap ${lap1Number}`;
+  const lap2Name = `Lap ${lap2Number}`;
+  const corners = data.delta_track_map.corners;
 
-  // Prepare data for inputs chart (throttle, brake, steering)
-  const inputsData = data.throttle.distance.map((distance, idx) => ({
-    distance: distance,
-    throttle1: data.throttle.lap_1[idx],
-    throttle2: data.throttle.lap_2[idx],
-    brake1: data.brake.lap_1[idx],
-    brake2: data.brake.lap_2[idx],
-  }));
+  // Max distance for computing zoom percentages
+  const maxDistance = useMemo(
+    () => Math.max(...data.delta_time.distance),
+    [data.delta_time.distance],
+  );
 
-  const steeringData = data.steering.distance.map((distance, idx) => ({
-    distance: distance,
-    lap1: data.steering.lap_1[idx],
-    lap2: data.steering.lap_2[idx],
-  }));
+  // Handler for corner clicks: zoom all charts to the corner's distance range
+  const handleCornerZoom = useCallback(
+    (startDistance: number, endDistance: number) => {
+      if (maxDistance <= 0) return;
+      const margin = (endDistance - startDistance) * 0.3;
+      const startPct = Math.max(0, ((startDistance - margin) / maxDistance) * 100);
+      const endPct = Math.min(100, ((endDistance + margin) / maxDistance) * 100);
+      setZoomRange({ start: startPct, end: endPct });
+    },
+    [maxDistance, setZoomRange],
+  );
 
-  const curvatureData = data.curvature.distance.map((distance, idx) => ({
-    distance: distance,
-    curvature: data.curvature.curvature[idx],
-  }));
+  // Handler for TrackMap corner click
+  const handleTrackMapCornerClick = useCallback(
+    (corner: Corner) => {
+      handleCornerZoom(corner.start_distance, corner.end_distance);
+    },
+    [handleCornerZoom],
+  );
 
-  // Generate X-axis ticks in 200m intervals
-  const maxDistance = Math.max(...data.delta_time.distance);
-  const xAxisTicks = [];
-  for (let i = 0; i <= maxDistance; i += 200) {
-    xAxisTicks.push(i);
-  }
+  // Sparkline data: downsample delta curve for the KPI card
+  const deltaSparkline = useMemo(() => {
+    const delta = data.delta_time.delta;
+    if (delta.length <= 30) return delta;
+    const step = Math.floor(delta.length / 30);
+    const result: number[] = [];
+    for (let i = 0; i < delta.length; i += step) {
+      result.push(delta[i]);
+    }
+    return result;
+  }, [data.delta_time.delta]);
+
+  // Max speed delta computation
+  const maxSpeedDelta = useMemo(() => {
+    return data.summary.max_speed_lap_1 - data.summary.max_speed_lap_2;
+  }, [data.summary.max_speed_lap_1, data.summary.max_speed_lap_2]);
+
+  // Track map data with speed overlay
+  const trackMapData = useMemo(() => {
+    return {
+      pos_x: data.delta_track_map.pos_x,
+      pos_z: data.delta_track_map.pos_z,
+      color_value: data.delta_track_map.color_value,
+      corners: data.delta_track_map.corners,
+    };
+  }, [data.delta_track_map]);
 
   return (
-    <div className="space-y-6">
-      {/* Summary Card */}
-      <Card className="bg-white border-gray-300">
-        <CardHeader>
-          <CardTitle>Lap Comparison Summary</CardTitle>
-          <CardDescription>
-            Lap {lap1Number} vs Lap {lap2Number}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Lap {lap1Number} Time</p>
-              <p className="text-2xl font-bold">{formatTime(data.summary.lap_1_time)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Lap {lap2Number} Time</p>
-              <p className="text-2xl font-bold">{formatTime(data.summary.lap_2_time)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Final Delta</p>
-              <p className={`text-2xl font-bold ${data.summary.delta_final < 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {formatDelta(data.summary.delta_final)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Best Gain</p>
-              <p className="text-2xl font-bold text-green-500">
-                {formatDelta(data.summary.delta_min)}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Max Speed (L{lap1Number})</p>
-              <p className="text-xl font-bold">{data.summary.max_speed_lap_1.toFixed(1)} km/h</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Max Speed (L{lap2Number})</p>
-              <p className="text-xl font-bold">{data.summary.max_speed_lap_2.toFixed(1)} km/h</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* KPI Summary Section */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <KpiCard
+          label={`Lap ${lap1Number} Time`}
+          value={formatTime(data.summary.lap_1_time)}
+          colorClass="text-violet-400"
+        />
+        <KpiCard
+          label={`Lap ${lap2Number} Time`}
+          value={formatTime(data.summary.lap_2_time)}
+          colorClass="text-amber-400"
+        />
+        <KpiCard
+          label="Final Delta"
+          value={formatDelta(data.summary.delta_final)}
+          colorClass={data.summary.delta_final < 0 ? 'text-green-400' : 'text-red-400'}
+          sparklineData={deltaSparkline}
+        />
+        <KpiCard
+          label="Best Gain"
+          value={formatDelta(data.summary.delta_min)}
+          colorClass="text-green-400"
+          trend="down"
+          trendValue={`at ${Math.round(data.summary.delta_min_position)}m`}
+        />
+        <KpiCard
+          label="Worst Loss"
+          value={formatDelta(data.summary.delta_max)}
+          colorClass="text-red-400"
+          trend="up"
+          trendValue={`at ${Math.round(data.summary.delta_max_position)}m`}
+        />
+        <KpiCard
+          label="Max Speed Delta"
+          value={`${Math.abs(maxSpeedDelta).toFixed(1)}`}
+          unit="km/h"
+          trend={maxSpeedDelta > 0.1 ? 'up' : maxSpeedDelta < -0.1 ? 'down' : 'neutral'}
+          trendValue={
+            maxSpeedDelta > 0.1
+              ? `L${lap1Number} faster`
+              : maxSpeedDelta < -0.1
+                ? `L${lap2Number} faster`
+                : 'Equal'
+          }
+        />
+      </div>
 
-      {/* Segment Analysis Card */}
-      <Card className="bg-white border-gray-300">
+      {/* Segment Analysis Cards */}
+      <Card>
         <CardHeader>
           <CardTitle>Top Time Gain/Loss Segments</CardTitle>
           <CardDescription>
@@ -163,25 +144,26 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Time Loss Segments */}
             <div>
-              <h3 className="text-lg font-semibold text-red-600 mb-3">Time Lost</h3>
+              <h3 className="text-lg font-semibold text-red-400 mb-3">Time Lost</h3>
               <div className="space-y-2">
                 {data.segment_analysis.time_loss_segments.map((segment, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
+                    className="flex items-center justify-between p-3 bg-red-500/10 rounded-lg border border-red-500/20 cursor-pointer hover:bg-red-500/15 transition-colors"
+                    onClick={() => handleCornerZoom(segment.start_distance, segment.end_distance)}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-gray-500">#{idx + 1}</span>
+                      <span className="text-sm font-medium text-muted-foreground">#{idx + 1}</span>
                       <div>
-                        <p className="text-sm font-medium">
+                        <p className="text-sm font-medium text-foreground">
                           {(segment.start_distance / 1000).toFixed(2)}km - {(segment.end_distance / 1000).toFixed(2)}km
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           {segment.start_distance.toFixed(0)}m - {segment.end_distance.toFixed(0)}m ({(segment.end_distance - segment.start_distance).toFixed(0)}m)
                         </p>
                       </div>
                     </div>
-                    <span className="text-lg font-bold text-red-600">
+                    <span className="text-lg font-bold text-red-400">
                       {formatDelta(segment.time_delta)}
                     </span>
                   </div>
@@ -191,25 +173,26 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
 
             {/* Time Gain Segments */}
             <div>
-              <h3 className="text-lg font-semibold text-green-600 mb-3">Time Gained</h3>
+              <h3 className="text-lg font-semibold text-green-400 mb-3">Time Gained</h3>
               <div className="space-y-2">
                 {data.segment_analysis.time_gain_segments.map((segment, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200"
+                    className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20 cursor-pointer hover:bg-green-500/15 transition-colors"
+                    onClick={() => handleCornerZoom(segment.start_distance, segment.end_distance)}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium text-gray-500">#{idx + 1}</span>
+                      <span className="text-sm font-medium text-muted-foreground">#{idx + 1}</span>
                       <div>
-                        <p className="text-sm font-medium">
+                        <p className="text-sm font-medium text-foreground">
                           {(segment.start_distance / 1000).toFixed(2)}km - {(segment.end_distance / 1000).toFixed(2)}km
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           {segment.start_distance.toFixed(0)}m - {segment.end_distance.toFixed(0)}m ({(segment.end_distance - segment.start_distance).toFixed(0)}m)
                         </p>
                       </div>
                     </div>
-                    <span className="text-lg font-bold text-green-600">
+                    <span className="text-lg font-bold text-green-400">
                       {formatDelta(segment.time_delta)}
                     </span>
                   </div>
@@ -220,361 +203,160 @@ export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
         </CardContent>
       </Card>
 
-      {/* Track Map - Delta Visualization */}
-      <Card className="bg-white border-gray-300">
-        <CardHeader>
-          <CardTitle>Track Map - Time Delta</CardTitle>
-          <CardDescription>
-            Green = Lap {lap2Number} gaining time | Red = Lap {lap2Number} losing time | Grey = Neutral | Numbered markers = Corners
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={500}>
-            <LineChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-              <XAxis
-                type="number"
-                dataKey="pos_x"
-                stroke="#000"
-                domain={['auto', 'auto']}
-                hide
-              />
-              <YAxis
-                type="number"
-                dataKey="pos_z"
-                stroke="#000"
-                domain={['auto', 'auto']}
-                hide
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
-              />
-              {createTrackSegments(
-                data.delta_track_map.pos_x,
-                data.delta_track_map.pos_z,
-                data.delta_track_map.color_value
-              ).map((segment, idx) => (
-                <Line
-                  key={`segment-${idx}`}
-                  type="linear"
-                  data={segment.points}
-                  dataKey="pos_z"
-                  stroke={segment.color}
-                  strokeWidth={3}
-                  dot={false}
-                  isAnimationActive={false}
-                  legendType="none"
+      {/* Two-column layout: Charts (left 70%) + Track Maps (right 30%) */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Right side: Track Maps - shown first on mobile */}
+        <div className="w-full lg:w-[30%] order-first lg:order-last">
+          <div className="lg:sticky lg:top-4 space-y-4">
+            {/* Track Map */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Track Map</CardTitle>
+                <CardDescription>
+                  Click corner labels to zoom charts
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pb-4">
+                <TrackMap
+                  data={trackMapData}
+                  height={400}
+                  initialMode="delta"
+                  onCornerClick={handleTrackMapCornerClick}
                 />
-              ))}
-              {data.delta_track_map.corners.map((corner) => (
-                <ReferenceDot
-                  key={`corner-${corner.corner_number}`}
-                  x={corner.pos_x}
-                  y={corner.pos_z}
-                  r={12}
-                  fill="#1e40af"
-                  stroke="#fff"
-                  strokeWidth={2}
-                >
-                  <Label
-                    value={`${corner.corner_number}`}
-                    position="center"
-                    fill="#fff"
-                    fontSize={10}
-                    fontWeight="bold"
-                  />
-                </ReferenceDot>
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-          {/* Color legend */}
-          <div className="flex justify-center mt-4 gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#22c55e' }} />
-              <span className="text-sm">Gaining Time</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#9ca3af' }} />
-              <span className="text-sm">Neutral</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }} />
-              <span className="text-sm">Losing Time</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full flex items-center justify-center text-white text-xs font-bold" style={{ backgroundColor: '#1e40af' }}>1</div>
-              <span className="text-sm">Corner</span>
+              </CardContent>
+            </Card>
+
+            {/* Mini Track Map */}
+            <div className="hidden lg:flex justify-center">
+              <div className="rounded-lg border bg-card shadow-sm p-3">
+                <p className="text-xs text-muted-foreground mb-2 text-center">Position</p>
+                <MiniTrackMap
+                  pos_x={data.delta_track_map.pos_x}
+                  pos_z={data.delta_track_map.pos_z}
+                  size={150}
+                />
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Delta Time Chart */}
-      <Card className="bg-white border-gray-300">
+        {/* Left side: Linked chart stack */}
+        <div className="w-full lg:w-[70%] space-y-4">
+          {/* Delta Time Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Delta Time</CardTitle>
+              <CardDescription>
+                Positive = Lap {lap2Number} slower | Negative = Lap {lap2Number} faster
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-2">
+              <DeltaTimeChart
+                deltaTime={data.delta_time}
+                corners={corners}
+                showDataZoom={true}
+                showCornerBands={true}
+                height={280}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Speed Comparison Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Speed Comparison</CardTitle>
+              <CardDescription>Speed (km/h) over distance</CardDescription>
+            </CardHeader>
+            <CardContent className="pb-2">
+              <SpeedComparisonChart
+                speed={data.speed}
+                lap1Name={lap1Name}
+                lap2Name={lap2Name}
+                corners={corners}
+                showCornerBands={true}
+                height={280}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Combined Throttle/Brake Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Throttle & Brake</CardTitle>
+              <CardDescription>
+                Pedal inputs comparison (solid = Lap {lap1Number}, dashed = Lap {lap2Number})
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-2">
+              <ThrottleBrakeChart
+                throttle={data.throttle}
+                brake={data.brake}
+                lap1Name={lap1Name}
+                lap2Name={lap2Name}
+                corners={corners}
+                showCornerBands={true}
+                height={280}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Steering Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Steering Input</CardTitle>
+              <CardDescription>Steering angle comparison</CardDescription>
+            </CardHeader>
+            <CardContent className="pb-2">
+              <SteeringChart
+                steering={data.steering}
+                lap1Name={lap1Name}
+                lap2Name={lap2Name}
+                corners={corners}
+                showCornerBands={true}
+                showDataZoom={true}
+                height={250}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Corner Analysis Table */}
+      <Card>
         <CardHeader>
-          <CardTitle>Delta Time</CardTitle>
+          <CardTitle>Corner Analysis</CardTitle>
           <CardDescription>
-            Positive values = Lap {lap2Number} slower | Negative values = Lap {lap2Number} faster
+            Corner-by-corner breakdown. Click a row to zoom all charts to that corner.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={deltaData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="distance"
-                label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
-                stroke="#000"
-                ticks={xAxisTicks}
-              />
-              <YAxis
-                label={{ value: 'Delta (s)', angle: -90, position: 'insideLeft' }}
-                stroke="#000"
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
-                formatter={(value: number) => formatDelta(value)}
-              />
-              <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
-              <Line
-                type="monotone"
-                dataKey="delta"
-                stroke="#60a5fa"
-                dot={false}
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Speed Chart */}
-      <Card className="bg-white border-gray-300">
-        <CardHeader>
-          <CardTitle>Speed Comparison</CardTitle>
-          <CardDescription>Speed (km/h) over distance</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={speedData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="distance"
-                label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
-                stroke="#000"
-                ticks={xAxisTicks}
-              />
-              <YAxis
-                label={{ value: 'Speed (km/h)', angle: -90, position: 'insideLeft' }}
-                stroke="#000"
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
-                formatter={(value: number) => `${value.toFixed(1)} km/h`}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="lap1"
-                stroke="#8b5cf6"
-                name={`Lap ${lap1Number}`}
-                dot={false}
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="lap2"
-                stroke="#f59e0b"
-                name={`Lap ${lap2Number}`}
-                dot={false}
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Throttle Chart */}
-      <Card className="bg-white border-gray-300">
-        <CardHeader>
-          <CardTitle>Throttle Input</CardTitle>
-          <CardDescription>Throttle application comparison</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={inputsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="distance"
-                label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
-                stroke="#000"
-                ticks={xAxisTicks}
-              />
-              <YAxis
-                label={{ value: 'Throttle (0-1)', angle: -90, position: 'insideLeft' }}
-                stroke="#000"
-                domain={[0, 1]}
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
-                formatter={(value: number) => `${(value * 100).toFixed(0)}%`}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="throttle1"
-                stroke="#10b981"
-                name={`Lap ${lap1Number}`}
-                dot={false}
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="throttle2"
-                stroke="#34d399"
-                name={`Lap ${lap2Number}`}
-                dot={false}
-                strokeWidth={2}
-                strokeDasharray="5 5"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Brake Chart */}
-      <Card className="bg-white border-gray-300">
-        <CardHeader>
-          <CardTitle>Brake Input</CardTitle>
-          <CardDescription>Brake application comparison</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={inputsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="distance"
-                label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
-                stroke="#000"
-                ticks={xAxisTicks}
-              />
-              <YAxis
-                label={{ value: 'Brake (0-1)', angle: -90, position: 'insideLeft' }}
-                stroke="#000"
-                domain={[0, 1]}
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
-                formatter={(value: number) => `${(value * 100).toFixed(0)}%`}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="brake1"
-                stroke="#ef4444"
-                name={`Lap ${lap1Number}`}
-                dot={false}
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="brake2"
-                stroke="#f87171"
-                name={`Lap ${lap2Number}`}
-                dot={false}
-                strokeWidth={2}
-                strokeDasharray="5 5"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Steering Chart */}
-      <Card className="bg-white border-gray-300">
-        <CardHeader>
-          <CardTitle>Steering Input</CardTitle>
-          <CardDescription>Steering angle comparison</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={steeringData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="distance"
-                label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
-                stroke="#000"
-                ticks={xAxisTicks}
-              />
-              <YAxis
-                label={{ value: 'Steering (-1 to 1)', angle: -90, position: 'insideLeft' }}
-                stroke="#000"
-                domain={[-1, 1]}
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
-              />
-              <Legend />
-              <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
-              <Line
-                type="monotone"
-                dataKey="lap1"
-                stroke="#f59e0b"
-                name={`Lap ${lap1Number}`}
-                dot={false}
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="lap2"
-                stroke="#062cd4"
-                name={`Lap ${lap2Number}`}
-                dot={false}
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Curvature Chart */}
-      <Card className="bg-white border-gray-300">
-        <CardHeader>
-          <CardTitle>Track Curvature</CardTitle>
-          <CardDescription>
-            Curvature along the track (positive = right turn, negative = left turn)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={curvatureData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis
-                dataKey="distance"
-                label={{ value: 'Distance (m)', position: 'insideBottom', offset: -5 }}
-                stroke="#000"
-                ticks={xAxisTicks}
-              />
-              <YAxis
-                label={{ value: 'Curvature (1/m)', angle: -90, position: 'insideLeft' }}
-                stroke="#000"
-              />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#fff', border: '1px solid #d1d5db' }}
-                formatter={(value: number) => value.toFixed(4)}
-              />
-              <ReferenceLine y={0} stroke="#666" strokeDasharray="3 3" />
-              <Line
-                type="monotone"
-                dataKey="curvature"
-                stroke="#8b5cf6"
-                name="Curvature"
-                dot={false}
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <CornerAnalysisTable
+            corners={corners}
+            speed={data.speed}
+            deltaTime={data.delta_time}
+            lap1Name={lap1Name}
+            lap2Name={lap2Name}
+            onCornerClick={handleCornerZoom}
+          />
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/**
+ * LapComparisonCharts orchestrator.
+ * Wraps all telemetry visualizations in a TelemetryCursorProvider
+ * so that all charts share linked crosshairs and zoom state.
+ */
+export function LapComparisonCharts({ data, lap1Number, lap2Number }: Props) {
+  return (
+    <TelemetryCursorProvider>
+      <LapComparisonChartsInner
+        data={data}
+        lap1Number={lap1Number}
+        lap2Number={lap2Number}
+      />
+    </TelemetryCursorProvider>
   );
 }

@@ -86,13 +86,13 @@ export function RaceListPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Ready':
-        return 'bg-green-100 text-green-800 border-green-300';
+        return 'bg-green-500/10 text-green-400 border-green-500/30';
       case 'Processing':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30';
       case 'Failed':
-        return 'bg-red-100 text-red-800 border-red-300';
+        return 'bg-red-500/10 text-red-400 border-red-500/30';
       default:
-        return 'bg-gray-100 text-gray-800 border-gray-300';
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -106,13 +106,13 @@ export function RaceListPage() {
       </div>
 
       {error && (
-        <div className="mb-6 p-3 bg-red-100 border border-red-300 rounded-md text-red-800">
+        <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-400">
           {error}
         </div>
       )}
 
       {loading && races.length === 0 ? (
-        <Card className="bg-white border-gray-300">
+        <Card>
           <CardContent className="py-12">
             <div className="flex justify-center items-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -121,9 +121,9 @@ export function RaceListPage() {
           </CardContent>
         </Card>
       ) : races.length === 0 ? (
-        <Card className="bg-white border-gray-300">
+        <Card>
           <CardContent className="py-12">
-            <p className="text-center text-gray-600">
+            <p className="text-center text-muted-foreground">
               No races found. Upload a race to get started.
             </p>
           </CardContent>
@@ -131,7 +131,7 @@ export function RaceListPage() {
       ) : (
         <div className="space-y-4">
           {races.map((race) => (
-            <Card key={race.race_id} className="bg-white border-gray-300">
+            <Card key={race.race_id}>
               <CardContent className="py-4">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   {/* Race Info */}
@@ -145,7 +145,7 @@ export function RaceListPage() {
                         {race.status}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-muted-foreground">
                       <div>
                         <span className="font-medium">Laps:</span> {race.laps_count}
                       </div>
@@ -182,7 +182,7 @@ export function RaceListPage() {
                       size="sm"
                       onClick={() => handleDelete(race.race_id)}
                       disabled={deletingId === race.race_id}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
                     >
                       {deletingId === race.race_id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -201,7 +201,7 @@ export function RaceListPage() {
 
       {/* Summary Card */}
       {races.length > 0 && (
-        <Card className="mt-6 bg-white border-gray-300">
+        <Card className="mt-6">
           <CardHeader>
             <CardTitle>Summary</CardTitle>
             <CardDescription>Overview of all race packages</CardDescription>
